@@ -142,7 +142,34 @@ window.requestAccess = function(btn) {
     const patientData = { name: patientName, mrn: mrn, dob: dob, condition: condition, img: imgSrc };
     localStorage.setItem('accessRequestData', JSON.stringify(patientData));
 
-    window.location.href = 'request-access-panel.php';
+    const formData = new FormData();
+    formData.append('action', 'send_otp');
+    formData.append('patient_mrn', mrn.replace('MRN-', '').trim());
+
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Requesting...';
+    btn.disabled = true;
+
+    fetch('../../api/doctor-panel/request-access.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert("OTP sent to the patient's registered phone number."); 
+            console.log('Demo OTP for testing:', data.demo_otp);
+            window.location.href = 'request-access-panel.php';
+        } else {
+            alert('Error: ' + data.error);
+            btn.innerHTML = '<i class="fa-solid fa-lock"></i> Request Profile Access';
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        btn.innerHTML = '<i class="fa-solid fa-lock"></i> Request Profile Access';
+        btn.disabled = false;
+    });
 }
 
 function closeProposeModal() {

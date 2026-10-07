@@ -42,9 +42,8 @@ try {
                                   p.full_name, p.dob, p.gender, p.phone, p.patient_id 
                            FROM appointments a
                            JOIN patients p ON a.patient_id = p.patient_id
-                           WHERE a.doctor_id = ? 
                            ORDER BY a.appointment_date ASC, a.time_slot ASC LIMIT 50");
-    $stmt->execute([$doctor_id]);
+    $stmt->execute();
     $appointments = $stmt->fetchAll();
 
     echo json_encode(['success' => true, 'appointments' => $appointments]);

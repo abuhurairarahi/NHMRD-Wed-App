@@ -192,7 +192,7 @@
 
             <!-- Action Buttons -->
             <div class="action-buttons">
-              <button type="button" class="btn-primary" id="verifyOtpBtn" onclick="verifyAndUnlock()">
+              <button type="button" class="btn-primary" id="verifyOtpBtn">
                 <i class="fa-solid fa-lock-open"></i> Access Profile / Verify & Unlock
               </button>
               <button type="button" class="btn-secondary" onclick="cancelAccess()">
@@ -275,6 +275,4 @@
   <script src="../../assets/js/doctor-panel/request-access.js"></script>
 </body>
 </html>
-
-
 

@@ -1,3 +1,38 @@
+<?php
+session_start();
+require_once __DIR__ . '/../../api/db.php';
+
+$patient_id = isset($_GET['patient_id']) ? (int)$_GET['patient_id'] : 1;
+
+// Fetch patient data
+$stmt = $pdo->prepare("SELECT * FROM patients WHERE patient_id = ?");
+$stmt->execute([$patient_id]);
+$patient = $stmt->fetch();
+
+if (!$patient) {
+    die("Patient profile could not be loaded or access was not granted.");
+}
+
+// Calculate Age
+$dob = new DateTime($patient['dob']);
+$now = new DateTime();
+$age = $now->diff($dob)->y;
+
+// Fetch Medications
+$stmtMed = $pdo->prepare("
+    SELECT pm.*, p.created_at, d.full_name as doctor_name, d.designation
+    FROM prescription_medications pm 
+    JOIN prescriptions p ON pm.prescription_id = p.prescription_id 
+    JOIN doctors d ON p.doctor_id = d.doctor_id 
+    WHERE p.patient_id = ? 
+    ORDER BY p.created_at DESC
+");
+$stmtMed->execute([$patient_id]);
+$medications = $stmtMed->fetchAll();
+
+// Fallback image if not present
+$photo_url = $patient['photo_url'] ?? 'https://i.pravatar.cc/120?img=32';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -91,17 +126,17 @@
             <i class="fa-solid fa-user-clock"></i> Session: <span>01:58:40</span>
             <span class="tag-interactive">INTERACTIVE</span>
           </div>
-          <button class="btn-write-rx"><i class="fa-solid fa-pen-to-square"></i> Write Prescription</button>
+          <a href="new-prescription-form.php?patient_id=<?= $patient_id ?>" class="btn-write-rx" style="text-decoration:none; display:inline-block;"><i class="fa-solid fa-pen-to-square"></i> Write Prescription</a>
         </div>
       </div>
 
       <!-- Module Navigation Tabs -->
       <nav class="module-tabs">
-        <a href="../../pages/doctor-panel/patient-medical-profile.php" class="tab-btn active"><i class="fa-solid fa-user"></i> Patient Profile</a>
-        <a href="../../pages/doctor-panel/patient-prescription-records.php" class="tab-btn"><i class="fa-solid fa-capsules"></i> Prescription Records</a>
-        <a href="../../pages/doctor-panel/patient-surgary-records.php" class="tab-btn"><i class="fa-solid fa-scalpel"></i> Surgery Records</a>
-        <a href="../../pages/doctor-panel/patient-test-records.php" class="tab-btn"><i class="fa-solid fa-vial"></i> Test Records</a>
-        <a href="../../pages/doctor-panel/patient-vaccine-records.php" class="tab-btn"><i class="fa-solid fa-syringe"></i> Vaccine Records</a>
+        <a href="../../pages/doctor-panel/patient-medical-profile.php?patient_id=<?= $patient_id ?>" class="tab-btn active"><i class="fa-solid fa-user"></i> Patient Profile</a>
+        <a href="../../pages/doctor-panel/patient-prescription-records.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-capsules"></i> Prescription Records</a>
+        <a href="../../pages/doctor-panel/patient-surgary-records.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-scalpel"></i> Surgery Records</a>
+        <a href="../../pages/doctor-panel/patient-test-records.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-vial"></i> Test Records</a>
+        <a href="../../pages/doctor-panel/patient-vaccine-records.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-syringe"></i> Vaccine Records</a>
       </nav>
 
       <!-- Main Content Body -->
@@ -111,22 +146,22 @@
         <div class="patient-card">
           <div class="patient-main-info">
             <div class="patient-avatar-wrap">
-              <img src="https://i.pravatar.cc/120?img=32" alt="Tanjila Akter Sultana">
-              <span class="blood-badge">A+</span>
+              <img src="<?= htmlspecialchars($photo_url) ?>" alt="<?= htmlspecialchars($patient['full_name']) ?>">
+              <span class="blood-badge"><?= htmlspecialchars($patient['blood_group'] ?? 'A+') ?></span>
             </div>
 
             <div class="patient-details">
               <div class="patient-name-row">
-                <h2>Tanjila Akter Sultana</h2>
-                <span class="mrn-code">MRN-449102</span>
+                <h2><?= htmlspecialchars($patient['full_name']) ?></h2>
+                <span class="mrn-code">MRN-<?= $patient_id ?></span>
                 <span class="otp-badge"><i class="fa-solid fa-lock-open"></i> Unlocked via OTP</span>
               </div>
 
               <div class="patient-meta-grid">
-                <span><i class="fa-regular fa-calendar"></i> DOB: Nov 07, 1988 (36 y/o)</span>
-                <span><i class="fa-solid fa-venus"></i> Female</span>
-                <span><i class="fa-solid fa-phone"></i> +880 1712-304829</span>
-                <span><i class="fa-regular fa-envelope"></i> tanjila.sultana@healthmail.bd</span>
+                <span><i class="fa-regular fa-calendar"></i> DOB: <?= htmlspecialchars(date('M d, Y', strtotime($patient['dob']))) ?> (<?= $age ?> y/o)</span>
+                <span><i class="fa-solid fa-venus-mars"></i> <?= htmlspecialchars(ucfirst($patient['gender'])) ?></span>
+                <span><i class="fa-solid fa-phone"></i> <?= htmlspecialchars($patient['phone'] ?? '+880 1712-304829') ?></span>
+                <span><i class="fa-regular fa-envelope"></i> <?= htmlspecialchars($patient['email'] ?? 'patient@nhmrd.gov.bd') ?></span>
               </div>
 
               <div class="patient-tags-row">
@@ -146,7 +181,7 @@
               <span class="status-indicator-dot green"></span>
             </div>
             <div class="vital-body">
-              <span class="vital-value">118/76 <small>mmHg</small></span>
+              <span class="vital-value"><?= htmlspecialchars($patient['blood_pressure'] ?? '118/76') ?> <small>mmHg</small></span>
             </div>
             <div class="vital-footer">
               <span class="tag-status-normal"><i class="fa-solid fa-circle-check"></i> Normal</span>
@@ -161,12 +196,12 @@
               <i class="fa-solid fa-ruler-vertical vital-icon"></i>
             </div>
             <div class="vital-body">
-              <span class="vital-value">64.2 <small>kg</small></span>
-              <span class="vital-subtext">168 cm (5' 6")</span>
+              <span class="vital-value"><?= htmlspecialchars($patient['weight_kg'] ?? '64.2') ?> <small>kg</small></span>
+              <span class="vital-subtext"><?= htmlspecialchars($patient['height_cm'] ?? '168') ?> cm</span>
             </div>
             <div class="vital-footer">
-              <span class="vital-note">141.5 lbs</span>
-              <span class="vital-change">-0.4kg (3mo)</span>
+              <span class="vital-note">BMI: <?= htmlspecialchars($patient['bmi'] ?? '22.7') ?></span>
+              <span class="vital-change">Stable</span>
             </div>
           </div>
 
@@ -271,95 +306,32 @@
             </div>
 
             <div class="med-cards-list">
-              <!-- Item 1 - Allergy Red Alert -->
-              <div class="med-item red-border red-bg-card">
-                <div class="med-icon red-bg"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="med-info">
-                  <div class="med-title red-text flex-title">
-                    Trimethoprim / Sulfamethoxazole (Bactrim DS) 800/160 mg
-                    <span class="allergy-tag-red">ALLERGY CONTRAINDICATION</span>
+              <?php if (empty($medications)): ?>
+                  <p>No medications found in the EHR registry.</p>
+              <?php else: ?>
+                  <?php foreach($medications as $med): ?>
+                  <div class="med-item <?= strpos(strtolower($med['medication_name']), 'allergy') !== false ? 'red-border red-bg-card' : 'blue-border' ?>">
+                    <div class="med-icon <?= strpos(strtolower($med['medication_name']), 'allergy') !== false ? 'red-bg' : 'blue-bg' ?>">
+                        <i class="fa-solid <?= strpos(strtolower($med['medication_name']), 'allergy') !== false ? 'fa-triangle-exclamation' : 'fa-capsules' ?>"></i>
+                    </div>
+                    <div class="med-info">
+                      <div class="med-title <?= strpos(strtolower($med['medication_name']), 'allergy') !== false ? 'red-text' : '' ?>">
+                          <?= htmlspecialchars($med['medication_name'] . ' ' . $med['dose_strength']) ?>
+                      </div>
+                      <div class="med-details">
+                          <?= htmlspecialchars($med['sig_instructions'] ?? $med['route_frequency']) ?>
+                      </div>
+                      <div class="med-meta">
+                          Prescribed: <?= htmlspecialchars(date('M d, Y', strtotime($med['created_at']))) ?> 
+                          &bull; Prescriber: <?= htmlspecialchars($med['doctor_name']) ?> (<?= htmlspecialchars($med['designation']) ?>) 
+                          &bull; Refills: <?= htmlspecialchars($med['refills'] ?? '0') ?>
+                      </div>
+                    </div>
                   </div>
-                  <div class="med-details red-text">
-                    CRITICAL EVENT (Oct 2009): Triggered acute urticarial reaction with pruritic maculopapular rash within 36 hours. Prompted emergency cessation. Permanent class contraindication tagged to patient clinical record.
-                  </div>
-                  <div class="med-meta red-text-sub">
-                    Prescribed: Oct 14, 2009 (Uncomplicated UTI) &bull; Hospital: DU Medical Centre &bull; <strong>EHR Permanent Alert #AL-0941</strong>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Item 2 -->
-              <div class="med-item gray-border">
-                <div class="med-icon purple-bg"><i class="fa-solid fa-venus"></i></div>
-                <div class="med-info">
-                  <div class="med-title">Ethinylestradiol / Drospirenone (Yaz) 0.03/3 mg</div>
-                  <div class="med-details">Indication: Oral Contraception & Cycle Regulation &bull; 1 tablet PO daily (28-day cycle)</div>
-                  <div class="med-meta">Prescribed: Jun 2012 - Aug 2019 (7 yrs) &bull; Prescriber: Dr. Farhana Chowdhury, OB/GYN &bull; Outcome: Ceased electively without sequelae</div>
-                </div>
-              </div>
-
-              <!-- Item 3 -->
-              <div class="med-item blue-border">
-                <div class="med-icon blue-bg"><i class="fa-solid fa-check"></i></div>
-                <div class="med-info">
-                  <div class="med-title">Azithromycin (Zithromax Z-Pak) 250 mg</div>
-                  <div class="med-details">Indication: Acute Bronchitis &bull; 500 mg Day 1, then 250 mg PO daily Days 2â€“5</div>
-                  <div class="med-meta">Prescribed: Feb 2017 (5-day course) &bull; Prescriber: Ibn Sina Urgent Care Centre &bull; Outcome: Complete clinical resolution</div>
-                </div>
-              </div>
-
-              <!-- Item 4 -->
-              <div class="med-item gray-border">
-                <div class="med-icon gray-bg"><i class="fa-solid fa-clock-rotate-left"></i></div>
-                <div class="med-info">
-                  <div class="med-title text-muted">Naproxen Sodium 500 mg</div>
-                  <div class="med-details text-muted">Indication: Tension Headache / Dysmenorrhea &bull; 1 tablet PO Q12H PRN with food</div>
-                  <div class="med-meta">Prescribed: Sep 2018 - Dec 2018 &bull; Prescriber: Dr. Farhana Chowdhury, OB/GYN &bull; Status: Inactive / OTC Transitioned</div>
-                </div>
-              </div>
+                  <?php endforeach; ?>
+              <?php endif; ?>
             </div>
           </div>
-
-          <!-- Timeline Group 3: Pediatric & Adolescent Care -->
-          <div class="timeline-group">
-            <div class="timeline-header">
-              <span class="group-title"><i class="fa-solid fa-child"></i> Pediatric & Adolescent Care <small>1988 - 2006 (Ages 0â€“18)</small></span>
-              <a href="#" class="view-all">View All</a>
-            </div>
-
-            <div class="med-cards-list">
-              <!-- Item 1 -->
-              <div class="med-item blue-border">
-                <div class="med-icon blue-bg"><i class="fa-solid fa-check"></i></div>
-                <div class="med-info">
-                  <div class="med-title">Amoxicillin 250 mg/5 mL</div>
-                  <div class="med-details">Indication: Acute Otitis Media &bull; 1 tsp (5 mL) PO TID x 10 days</div>
-                  <div class="med-meta">Prescribed: Jan 1994 (age 5) & Nov 1997 (age 9) &bull; Prescriber: Dr. Kazi Humayun Kabir, Pediatrics &bull; Record: Archived Legacy Chart #PED-1132</div>
-                </div>
-              </div>
-
-              <!-- Item 2 -->
-              <div class="med-item gray-border">
-                <div class="med-icon light-blue-bg"><i class="fa-solid fa-spray-can"></i></div>
-                <div class="med-info">
-                  <div class="med-title">Albuterol Sulfate Inhalation Aerosol 90 mcg</div>
-                  <div class="med-details">Indication: Childhood Reactive Airway Disease / Post-viral wheeze &bull; 1-2 puffs Q4-6H PRN with spacer</div>
-                  <div class="med-meta">Prescribed: 1996 - 2001 (Ages 8-13) &bull; Prescriber: Dr. Kazi Humayun Kabir, Pediatrics &bull; Note: Outgrown in adolescence; no adult recurrence</div>
-                </div>
-              </div>
-
-              <!-- Item 3 -->
-              <div class="med-item blue-border">
-                <div class="med-icon blue-bg"><i class="fa-solid fa-check"></i></div>
-                <div class="med-info">
-                  <div class="med-title">Cefdinir 125 mg/5 mL</div>
-                  <div class="med-details">Indication: Streptococcal Pharyngitis &bull; 7 mL PO once daily x 10 days</div>
-                  <div class="med-meta">Prescribed: Dec 2002 (Age 14) &bull; Prescriber: Dr. Kazi Humayun Kabir, Pediatrics &bull; Outcome: Resolved completely</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
       </main>
     </div>

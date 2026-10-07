@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/json');
@@ -131,7 +132,8 @@ try {
         ],
         'appointments' => $appointments,
         'activities' => $activities,
-        'notices' => $notices
+        'notices' => $notices,
+        'pending_otp' => $_SESSION['wa_otp_' . $patient_id] ?? null
     ]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Dashboard error: ' . $e->getMessage()]);

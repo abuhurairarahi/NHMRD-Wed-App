@@ -198,9 +198,9 @@
                 </div>
 
                 <div class="action-buttons-group">
-                  <button class="btn-action btn-green"><i class="fa-solid fa-check"></i> Approved Visit</button>
-                  <button class="btn-action btn-outline"><i class="fa-regular fa-clock"></i> Propose Alternative time</button>
-                  <button class="btn-action btn-red"><i class="fa-solid fa-lock"></i> Request Profile Access</button>
+                  <button class="btn-action btn-green" onclick="approveAppointment(this, 1)"><i class="fa-solid fa-check"></i> Approved Visit</button>
+                  <button class="btn-action btn-outline" onclick="openProposeModal(this, 1)"><i class="fa-regular fa-clock"></i> Propose Alternative time</button>
+                  <button class="btn-action btn-red" onclick="requestAccess(this)"><i class="fa-solid fa-lock"></i> Request Profile Access</button>
                 </div>
               </div>
             </div>
@@ -244,8 +244,8 @@
 
                 <div class="action-buttons-group">
                   <button class="btn-action btn-green" disabled><i class="fa-solid fa-check"></i> Approved Visit</button>
-                  <button class="btn-action btn-outline"><i class="fa-regular fa-clock"></i> Propose Alternative time</button>
-                  <button class="btn-action btn-red" disabled><i class="fa-solid fa-lock"></i> Request Profile Access</button>
+                  <button class="btn-action btn-outline" onclick="openProposeModal(this, 2)"><i class="fa-regular fa-clock"></i> Propose Alternative time</button>
+                  <button class="btn-action btn-red" onclick="requestAccess(this)" disabled><i class="fa-solid fa-lock"></i> Request Profile Access</button>
                 </div>
               </div>
             </div>
@@ -312,9 +312,9 @@
                 </div>
 
                 <div class="action-buttons-group">
-                  <button class="btn-action btn-green"><i class="fa-solid fa-check"></i> Approved</button>
+                  <button class="btn-action btn-green" onclick="approveAppointment(this, 3)"><i class="fa-solid fa-check"></i> Approved</button>
                   <button class="btn-action btn-outline" disabled><i class="fa-regular fa-clock"></i> Propose Alternative time</button>
-                  <button class="btn-action btn-red"><i class="fa-solid fa-lock"></i> Request Profile Access</button>
+                  <button class="btn-action btn-red" onclick="requestAccess(this)"><i class="fa-solid fa-lock"></i> Request Profile Access</button>
                 </div>
               </div>
             </div>
@@ -363,9 +363,9 @@
                 </div>
 
                 <div class="action-buttons-group">
-                  <button class="btn-action btn-green"><i class="fa-solid fa-check"></i> Approve Visit</button>
-                  <button class="btn-action btn-outline"><i class="fa-regular fa-clock"></i> Propose Alternative time</button>
-                  <button class="btn-action btn-red" disabled><i class="fa-solid fa-lock"></i> Request Profile Access</button>
+                  <button class="btn-action btn-green" onclick="approveAppointment(this, 4)"><i class="fa-solid fa-check"></i> Approve Visit</button>
+                  <button class="btn-action btn-outline" onclick="openProposeModal(this, 4)"><i class="fa-regular fa-clock"></i> Propose Alternative time</button>
+                  <button class="btn-action btn-red" onclick="requestAccess(this)" disabled><i class="fa-solid fa-lock"></i> Request Profile Access</button>
                 </div>
               </div>
             </div>

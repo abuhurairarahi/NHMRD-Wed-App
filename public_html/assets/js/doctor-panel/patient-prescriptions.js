@@ -4,8 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchPatientPrescriptions(patient_id);
 });
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
+}
+
 function fetchPatientPrescriptions(patient_id) {
-    fetch(`../../api/doctor-panel/patient-prescriptions.php?patient_id=${patient_id}&doctor_id=1`)
+    fetch(`../../api/doctor-panel/patient-prescriptions.php?patient_id=${encodeURIComponent(patient_id)}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -27,30 +37,40 @@ function updatePatientPrescriptionsUI(data) {
     
     document.querySelector('.patient-details h2').textContent = pt.full_name;
     document.querySelector('.patient-avatar-wrap img').src = pt.photo_url || 'https://i.pravatar.cc/120?img=32';
+    document.querySelector('.mrn-badge').textContent = `MRN-${pt.patient_id}`;
     
     const metaRow = document.querySelector('.patient-meta-row');
-    metaRow.innerHTML = `<span>${age} y/o ${pt.gender}</span> &bull; <span>DOB: ${pt.dob}</span> &bull; <span>Blood: <strong>${pt.blood_group || 'Unknown'}</strong></span>`;
+    metaRow.textContent = `${age} y/o ${pt.gender} • DOB: ${pt.dob} • Blood: ${pt.blood_group || 'Unknown'}`;
 
     // 2. Allergies
     const allergyBox = document.querySelector('.allergy-warning-box');
     if (data.allergies && data.allergies.length > 0) {
         allergyBox.style.display = 'flex';
-        const allergy = data.allergies[0];
-        allergyBox.querySelector('.warning-text p').textContent = `${allergy.allergy_name} (${allergy.reaction_severity} - ${allergy.reaction_description})`;
+        allergyBox.querySelector('.warning-text p').textContent = data.allergies
+            .map(allergy => `${allergy.allergy_name} (${allergy.severity || 'severity not recorded'})`)
+            .join(', ');
     } else {
         allergyBox.style.display = 'none';
     }
 
     // 3. Prescriptions List
     const rxContainer = document.querySelector('.rx-records-stack');
-    if (rxContainer && data.prescriptions.length > 0) {
-        // Clear all except the first card if it's a contraindicated allergy card, or clear all
-        // For simplicity, we clear all and render the active ones
-        rxContainer.innerHTML = '';
+    if (rxContainer) {
+        rxContainer.replaceChildren();
+        if (!data.prescriptions.length) {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.className = 'rx-card';
+            emptyMessage.textContent = 'No prescriptions have been recorded for this patient.';
+            rxContainer.appendChild(emptyMessage);
+            return;
+        }
 
         data.prescriptions.forEach(rx => {
             const rxDate = new Date(rx.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-            
+            const medicationName = rx.medication_name
+                ? `${rx.medication_name}${rx.dose_strength ? ` ${rx.dose_strength}` : ''}`
+                : rx.title;
+            const instructions = rx.sig_instructions || rx.route_frequency || 'No medication instructions recorded.';
             const cardHTML = `
             <div class="rx-card">
               <div class="rx-card-top flex-between">
@@ -58,11 +78,11 @@ function updatePatientPrescriptionsUI(data) {
                   <div class="rx-icon green-icon-bg"><i class="fa-solid fa-capsules"></i></div>
                   <div>
                     <div class="rx-title-group">
-                      <h3 class="rx-title">${rx.medication_name} ${rx.dose_strength}</h3>
-                      <span class="status-tag green-tag">${rx.status.toUpperCase()}</span>
+                      <h3 class="rx-title">${escapeHtml(medicationName)}</h3>
+                      <span class="status-tag green-tag">${escapeHtml(rx.status.toUpperCase())}</span>
                     </div>
                     <p class="rx-sig">
-                      <strong>Sig:</strong> ${rx.sig_instructions || rx.route_frequency}
+                      <strong>Sig:</strong> ${escapeHtml(instructions)}
                     </p>
                   </div>
                 </div>
@@ -80,15 +100,15 @@ function updatePatientPrescriptionsUI(data) {
                 </div>
                 <div>
                   <span class="col-label">PRESCRIBER</span>
-                  <strong class="col-value">${rx.prescriber_name}</strong>
+                  <strong class="col-value">${escapeHtml(rx.prescriber_name)}</strong>
                 </div>
                 <div>
                   <span class="col-label">DISPENSER</span>
                   <strong class="col-value">NHMRD Pharmacy</strong>
                 </div>
                 <div>
-                  <span class="col-label">REFILLS LEFT</span>
-                  <strong class="col-value green-text">${rx.refills} refills remaining</strong>
+                  <span class="col-label">${rx.medication_name ? 'REFILLS LEFT' : 'PRESCRIPTION'}</span>
+                  <strong class="col-value green-text">${rx.medication_name ? `${escapeHtml(rx.refills ?? 0)} refills remaining` : escapeHtml(rx.title)}</strong>
                 </div>
               </div>
             </div>

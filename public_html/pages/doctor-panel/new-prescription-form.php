@@ -1,3 +1,34 @@
+<?php
+require_once __DIR__ . '/../../api/db.php';
+
+$patient_id = filter_input(INPUT_GET, 'patient_id', FILTER_VALIDATE_INT);
+if (!$patient_id || $patient_id < 1) {
+  http_response_code(400);
+  exit('A valid patient ID is required to write a prescription.');
+}
+
+$patientStmt = $pdo->prepare('SELECT patient_id, full_name, dob, gender, status FROM patients WHERE patient_id = ?');
+$patientStmt->execute([$patient_id]);
+$patient = $patientStmt->fetch();
+if (!$patient) {
+  http_response_code(404);
+  exit('The requested patient could not be found.');
+}
+
+$allergyStmt = $pdo->prepare('SELECT allergy_name, severity FROM patient_allergies WHERE patient_id = ? ORDER BY allergy_name');
+$allergyStmt->execute([$patient_id]);
+$allergies = $allergyStmt->fetchAll();
+
+$doctorId = (int)($_SESSION['doctor_id'] ?? 1);
+$doctorStmt = $pdo->prepare('SELECT full_name, designation FROM doctors WHERE doctor_id = ?');
+$doctorStmt->execute([$doctorId]);
+$doctor = $doctorStmt->fetch();
+$doctorName = $doctor ? $doctor['full_name'] : 'Treating Doctor';
+$doctorDesignation = $doctor ? ($doctor['designation'] ?? '') : '';
+$age = (new DateTimeImmutable($patient['dob']))->diff(new DateTimeImmutable('today'))->y;
+$gender = $patient['gender'] === 'intersex_other' ? 'Other' : ucfirst($patient['gender']);
+$escape = static fn($value) => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,11 +104,11 @@
           
           <div class="doctor-profile-badge">
             <div class="doctor-info-text">
-              <span class="doctor-name">Dr. Nusrat Jahan, MD</span>
-              <span class="doctor-dept">Internal Medicine &amp; Therapeutics</span>
+              <span class="doctor-name"><?= $escape($doctorName) ?></span>
+              <span class="doctor-dept"><?= $escape($doctorDesignation) ?></span>
             </div>
             <div class="doctor-avatar">
-              <img src="https://i.pravatar.cc/100?img=47" alt="Dr. Nusrat Jahan">
+              <img src="https://i.pravatar.cc/100?img=47" alt="<?= $escape($doctorName) ?>">
             </div>
           </div>
         </div>
@@ -86,29 +117,38 @@
       <!-- Patient Header Strip -->
       <div class="patient-strip">
         <div class="patient-strip-main">
-          <img src="https://i.pravatar.cc/100?img=32" alt="Sanjana Farhin" class="patient-strip-avatar">
+          <img src="https://i.pravatar.cc/100?img=32" alt="<?= $escape($patient['full_name']) ?>" class="patient-strip-avatar">
           <div class="patient-strip-details">
             <div class="patient-strip-line1">
-              <h2 class="patient-strip-name">Sanjana Farhin</h2>
-              <span class="patient-strip-badge">Female</span>
-              <span class="patient-strip-dob">DOB: 14 Aug 1988 (36 yrs)</span>
-              <span class="patient-strip-badge-blue">Active Patient</span>
+              <h2 class="patient-strip-name"><?= $escape($patient['full_name']) ?></h2>
+              <span class="patient-strip-badge"><?= $escape($gender) ?></span>
+              <span class="patient-strip-dob">DOB: <?= $escape(date('d M Y', strtotime($patient['dob']))) ?> (<?= $age ?> yrs)</span>
+              <span class="patient-strip-badge-blue"><?= $escape(ucfirst($patient['status'])) ?> Patient</span>
             </div>
             <div class="patient-strip-line2">
-              <span>MRN: <strong>#449102</strong></span>
+              <span>MRN: <strong>#<?= (int)$patient['patient_id'] ?></strong></span>
               <span class="sep">&bull;</span>
-              <span>Attending Dr: <strong>Dr. Nusrat Jahan, MD</strong></span>
+              <span>Attending Dr: <strong><?= $escape($doctorName) ?></strong></span>
               <span class="sep">&bull;</span>
-              <span>Primary Care Provider: <strong>Dr. Nusrat Jahan, MD</strong></span>
+              <span>Primary Care Provider: <strong><?= $escape($doctorName) ?></strong></span>
             </div>
           </div>
         </div>
 
         <div class="patient-strip-alerts">
-          <div class="alert-tag alert-red">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            <span><strong>CRITICAL ALLERGY:</strong> Sulfonamides (Severe Urticaria / Anaphylaxis)</span>
-          </div>
+          <?php if ($allergies): ?>
+            <?php foreach ($allergies as $allergy): ?>
+              <div class="alert-tag alert-red">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span><strong><?= $escape(strtoupper($allergy['severity'])) ?> ALLERGY:</strong> <?= $escape($allergy['allergy_name']) ?></span>
+              </div>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <div class="alert-tag alert-blue">
+              <i class="fa-solid fa-circle-info"></i>
+              <span><strong>ALLERGIES:</strong> None documented</span>
+            </div>
+          <?php endif; ?>
           <div class="alert-tag alert-blue">
             <i class="fa-regular fa-clock"></i>
             <span><strong>ENCOUNTER TIME:</strong> 01h 44m</span>
@@ -156,8 +196,13 @@
                 </div>
                 <div class="input-with-icon">
                   <i class="fa-solid fa-notes-medical"></i>
-                  <input type="text" value="Acute Migraine Treatment &amp; Prophylactic Management Protocol" class="form-control bold-input">
+                  <input id="prescription-title" type="text" class="form-control bold-input" required>
                 </div>
+              </div>
+
+              <div class="form-group">
+                <label for="chief-complaint">CHIEF COMPLAINT</label>
+                <input id="chief-complaint" type="text" class="form-control" placeholder="Primary reason for this prescription">
               </div>
 
               <div class="form-group">
@@ -165,7 +210,7 @@
                   <label>PRESENTING SYMPTOMS, ONSET, SEVERITY &amp; TRIGGERS</label>
                   <span class="icd-code-pill">ICD-10: G43.909</span>
                 </div>
-                <textarea class="form-control text-area-custom" rows="4">Patient reports acute throbbing unilateral pain (left temporal/orbital region) rated 8/10 on pain scale, ongoing for 12 hours. Accompanied by severe visual aura (flashing lights/scotoma), moderate photophobia, and phonophobia. Preceded by mild neck stiffness. Trigger suspected to be acute work stress and irregular sleep pattern over the past 72 hours. No relief obtained from OTC NSAIDs.</textarea>
+                <textarea id="prescription-symptoms" class="form-control text-area-custom" rows="4"></textarea>
               </div>
 
               <div class="symptom-tags-row">
@@ -249,86 +294,6 @@
                 <button class="btn-add-primary"><i class="fa-solid fa-plus"></i> Add Medication</button>
               </div>
 
-              <!-- Prescribed Med 1 -->
-              <div class="med-order-card">
-                <div class="med-card-header">
-                  <div class="med-title-row">
-                    <span class="med-badge-type bg-sky">A</span>
-                    <h4 class="med-name">Sumatriptan Succinate (Imitrex)</h4>
-                    <span class="med-tag tag-teal">Acute Migraine</span>
-                  </div>
-                  <div class="med-actions">
-                    <button class="icon-action"><i class="fa-solid fa-pen"></i></button>
-                    <button class="icon-action danger"><i class="fa-regular fa-trash-can"></i></button>
-                  </div>
-                </div>
-                <div class="med-ndc">NDC 00173-0731-00 &bull; Oral Film Coated Tablet</div>
-
-                <div class="med-grid-4col">
-                  <div class="med-field">
-                    <span class="m-lbl">DOSE &amp; STRENGTH</span>
-                    <span class="m-val">50mg Tablet</span>
-                  </div>
-                  <div class="med-field">
-                    <span class="m-lbl">ROUTE &amp; FREQUENCY</span>
-                    <span class="m-val">Oral (PO) &bull; PRN at onset of aura</span>
-                  </div>
-                  <div class="med-field">
-                    <span class="m-lbl">DISPENSE / REFILLS</span>
-                    <span class="m-val">9 Tablets &bull; 3 Refills (90 day max)</span>
-                  </div>
-                  <div class="med-field">
-                    <span class="m-lbl">MAX DAILY LIMIT</span>
-                    <span class="m-val text-red">Max 200 mg / 24 hrs</span>
-                  </div>
-                </div>
-
-                <div class="med-instructions-box">
-                  <i class="fa-solid fa-circle-info"></i>
-                  <span><strong>SIG / INSTRUCTIONS:</strong> Take 1 tablet by mouth at onset of acute migraine headache. May repeat after 2 hours if headache recurs or only partially resolves. Do not exceed 200mg (4 tablets) in any 24-hour period.</span>
-                </div>
-              </div>
-
-              <!-- Prescribed Med 2 -->
-              <div class="med-order-card">
-                <div class="med-card-header">
-                  <div class="med-title-row">
-                    <span class="med-badge-type bg-indigo">B</span>
-                    <h4 class="med-name">Propranolol Hydrochloride ER</h4>
-                    <span class="med-tag tag-blue">Prophylactic</span>
-                  </div>
-                  <div class="med-actions">
-                    <button class="icon-action"><i class="fa-solid fa-pen"></i></button>
-                    <button class="icon-action danger"><i class="fa-regular fa-trash-can"></i></button>
-                  </div>
-                </div>
-                <div class="med-ndc">NDC 00054-4720-25 &bull; Extended-Release Capsule</div>
-
-                <div class="med-grid-4col">
-                  <div class="med-field">
-                    <span class="m-lbl">DOSE &amp; STRENGTH</span>
-                    <span class="m-val">80mg Capsule ER</span>
-                  </div>
-                  <div class="med-field">
-                    <span class="m-lbl">ROUTE &amp; FREQUENCY</span>
-                    <span class="m-val">Oral (PO) &bull; Daily at Bedtime</span>
-                  </div>
-                  <div class="med-field">
-                    <span class="m-lbl">DISPENSE / REFILLS</span>
-                    <span class="m-val">30 Capsules &bull; 2 Refills</span>
-                  </div>
-                  <div class="med-field">
-                    <span class="m-lbl">SAFETY NOTE</span>
-                    <span class="m-val text-amber">Check pulse &amp; resting BP</span>
-                  </div>
-                </div>
-
-                <div class="med-instructions-box">
-                  <i class="fa-solid fa-circle-info"></i>
-                  <span><strong>SIG / INSTRUCTIONS:</strong> Take 1 capsule by mouth once daily in evening for migraine prevention. Do not crush or chew capsule. Do not abruptly discontinue without consulting physician.</span>
-                </div>
-              </div>
-
               <!-- Add New Medication Draft Box -->
               <div class="draft-med-box">
                 <div class="draft-box-header">
@@ -379,48 +344,6 @@
                   <h3>Assign Medical &amp; Laboratory Tests</h3>
                 </div>
                 <button class="btn-add-primary"><i class="fa-solid fa-plus"></i> Add Test</button>
-              </div>
-
-              <!-- Lab Item 1 -->
-              <div class="lab-order-card">
-                <div class="lab-card-top">
-                  <div class="lab-title-row">
-                    <span class="lab-icon-box bg-teal"><i class="fa-solid fa-vial"></i></span>
-                    <div>
-                      <h4 class="lab-name">Complete Blood Count (CBC) with Differential</h4>
-                      <span class="loinc-tag">LOINC: 57021-8</span>
-                      <span class="lab-status-badge">Routine Monitoring</span>
-                    </div>
-                  </div>
-                  <div class="med-actions">
-                    <button class="icon-action danger"><i class="fa-regular fa-trash-can"></i></button>
-                  </div>
-                </div>
-                <p class="lab-desc">Specimen: Venous Blood &bull; DX Ref: H81.0 &bull; Reason: Baseline baseline blood parameters prior to pharmacotherapy and exclude acute infection or inflammatory leukocytosis markers.</p>
-                <div class="lab-card-footer">
-                  <span>Priority: <strong>Routine</strong></span>
-                </div>
-              </div>
-
-              <!-- Lab Item 2 -->
-              <div class="lab-order-card">
-                <div class="lab-card-top">
-                  <div class="lab-title-row">
-                    <span class="lab-icon-box bg-blue"><i class="fa-solid fa-microscope"></i></span>
-                    <div>
-                      <h4 class="lab-name">Comprehensive Metabolic Panel (CMP-14)</h4>
-                      <span class="loinc-tag">LOINC: 24323-8</span>
-                      <span class="lab-status-badge badge-amber">Fasting Required</span>
-                    </div>
-                  </div>
-                  <div class="med-actions">
-                    <button class="icon-action danger"><i class="fa-regular fa-trash-can"></i></button>
-                  </div>
-                </div>
-                <p class="lab-desc">Specimen: Venous Blood &bull; DX Ref: G43.9 &bull; Reason: Renal and hepatic panel prior to prolonged triptan/beta-blocker usage and rule out electrolyte disorders.</p>
-                <div class="lab-card-footer">
-                  <span>Priority: <strong>Fasting / Routine</strong></span>
-                </div>
               </div>
 
               <!-- Add New Test Draft Box (FIXED LABELS) -->
@@ -480,7 +403,7 @@
                 <button class="btn-template-insert"><i class="fa-solid fa-wand-magic-sparkles"></i> Insert Migraine Hygiene Template</button>
               </div>
 
-              <textarea class="advice-list-box" style="width: 491.991px;">
+              <textarea id="doctors-statement" class="advice-list-box" style="width: 491.991px;">
                 
               </textarea>
             </div>
@@ -500,14 +423,14 @@
                   <label>NEXT SCHEDULED VISIT DATE</label>
                   <div class="date-picker-input">
                     <i class="fa-regular fa-calendar"></i>
-                    <input type="text" value="Nov 14, 2026 (in 8 Weeks)" class="form-control">
+                    <input id="next-visit-date" type="date" class="form-control">
                   </div>
                 </div>
                 <div class="form-group">
                   <label>CONSULTATION VISIT TYPE</label>
-                  <select class="form-control select-custom">
-                    <option>In-person Clinical Follow-up (Room 301)</option>
-                    <option>Telehealth Virtual Consultation</option>
+                  <select id="visit-type" class="form-control select-custom">
+                    <option value="in_person">In-person Clinical Follow-up (Room 301)</option>
+                    <option value="telehealth">Telehealth Virtual Consultation</option>
                   </select>
                 </div>
               </div>
@@ -574,8 +497,7 @@
                 <i class="fa-solid fa-signature"></i>
                 <div>
                   <h5>Prescriber Digital Signature</h5>
-                  <span>Dr. Nusrat Jahan, MD</span>
-                  <span class="sig-meta">NPI: 1942085102 &bull; DEA: BJ491023</span>
+                  <span><?= $escape($doctorName) ?><?= $doctorDesignation ? ', ' . $escape($doctorDesignation) : '' ?></span>
                 </div>
               </div>
 
@@ -606,4 +528,3 @@
   <script src="../../assets/js/doctor-panel/new-prescription.js"></script>
 </body>
 </html>
-

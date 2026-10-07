@@ -1,98 +1,92 @@
 <?php
-header('Content-Type: application/json');
+ob_start();
 require_once '../db.php';
+ob_clean(); // clear any warnings or BOM that might have been printed
+header('Content-Type: application/json');
+try {
+    $action = $_POST['action'] ?? '';
 
-$action = $_POST['action'] ?? '';
-
-if ($action === 'send_otp') {
-    $patient_mrn = $_POST['patient_mrn'] ?? '';
-    
-    // 1. Find patient by MRN or UID
-    $stmt = $pdo->prepare("SELECT patient_id, full_name, phone FROM patients WHERE uid = ? OR patient_id = ?");
-    $stmt->execute([$patient_mrn, str_replace('MRN-', '', $patient_mrn)]);
-    $patient = $stmt->fetch();
-
-    if (!$patient) {
-        echo json_encode(['success' => false, 'error' => 'Patient not found.']);
-        exit;
-    }
-
-    $phone = $patient['phone'];
-    if (!$phone) {
-        echo json_encode(['success' => false, 'error' => 'Patient does not have a registered phone number.']);
-        exit;
-    }
-
-    // 2. Generate 6-digit OTP
-    $otp = rand(100000, 999999);
-    
-    // Store in session (for demo) or DB
-    session_start();
-    $_SESSION['wa_otp_' . $patient['patient_id']] = $otp;
-
-    // 3. Send WhatsApp OTP via WhatsApp Cloud API (Simulated)
-    /*
-    $wa_token = 'YOUR_WHATSAPP_CLOUD_API_TOKEN';
-    $wa_phone_id = 'YOUR_PHONE_NUMBER_ID';
-    $url = "https://graph.facebook.com/v17.0/{$wa_phone_id}/messages";
-
-    $data = [
-        'messaging_product' => 'whatsapp',
-        'to' => $phone,
-        'type' => 'template',
-        'template' => [
-            'name' => 'auth_otp', // your WhatsApp approved template name
-            'language' => ['code' => 'en_US'],
-            'components' => [
-                [
-                    'type' => 'body',
-                    'parameters' => [['type' => 'text', 'text' => $otp]]
-                ],
-                [
-                    'type' => 'button',
-                    'sub_type' => 'url',
-                    'index' => '0',
-                    'parameters' => [['type' => 'text', 'text' => $otp]]
-                ]
-            ]
-        ]
-    ];
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$wa_token}", "Content-Type: application/json"]);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $response = curl_exec($ch);
-    curl_close($ch);
-    */
-
-    // For Demo: Return OTP in response so we can test the frontend easily
-    echo json_encode([
-        'success' => true, 
-        'message' => "OTP sent to WhatsApp ($phone).", 
-        'patient_id' => $patient['patient_id'],
-        'demo_otp' => $otp // REMOVE IN PRODUCTION
-    ]);
-
-} elseif ($action === 'verify_otp') {
-    session_start();
-    $patient_id = $_POST['patient_id'] ?? '';
-    $entered_otp = $_POST['otp'] ?? '';
-    
-    $saved_otp = $_SESSION['wa_otp_' . $patient_id] ?? null;
-
-    if ($saved_otp && $saved_otp == $entered_otp) {
-        // Clear OTP
-        unset($_SESSION['wa_otp_' . $patient_id]);
+    if ($action === 'send_otp') {
+        $patient_mrn = $_POST['patient_mrn'] ?? '';
         
-        // Grant Profile Access (Insert into profile_access_requests or similar)
-        // For demo, just return success
-        echo json_encode(['success' => true, 'message' => 'OTP Verified. Profile unlocked.']);
+        // 1. Find patient by MRN
+        $stmt = $pdo->prepare("SELECT patient_id, full_name, phone FROM patients WHERE patient_id = ?");
+        // Cast the second param to int if possible to avoid MySQL warnings
+        $clean_id = str_replace('MRN-', '', $patient_mrn);
+        $clean_id = is_numeric($clean_id) ? (int)$clean_id : 0;
+        
+        $stmt->execute([$clean_id]);
+        $patient = $stmt->fetch();
+
+        if (!$patient) {
+            echo json_encode(['success' => false, 'error' => 'Patient not found.']);
+            exit;
+        }
+
+        $phone = $patient['phone'];
+        if (!$phone) {
+            echo json_encode(['success' => false, 'error' => 'Patient does not have a registered phone number.']);
+            exit;
+        }
+
+        // 2. Generate 6-digit OTP
+        $otp = rand(100000, 999999);
+        
+        // Store in session (for demo) or DB
+
+        $_SESSION['wa_otp_' . $patient['patient_id']] = $otp;
+
+        // 3. Send WhatsApp OTP via WhatsApp Cloud API (Simulated)
+        // For Demo: Return OTP in response so we can test the frontend easily
+        echo json_encode([
+            'success' => true, 
+            'message' => "OTP sent to WhatsApp ($phone).", 
+            'patient_id' => $patient['patient_id'],
+            'demo_otp' => $otp // REMOVE IN PRODUCTION
+        ]);
+
+    } elseif ($action === 'verify_otp') {
+        // 6-digit OTP Verification
+
+        $patient_id = $_POST['patient_id'] ?? '';
+        $otp = $_POST['otp'] ?? ''; 
+        
+        if (!$patient_id || !$otp) {
+            echo json_encode(['success' => false, 'error' => 'Missing patient ID or OTP.']);
+            exit;
+        }
+
+        // Verify OTP from session
+        $session_otp_key = 'wa_otp_' . $patient_id;
+        if (isset($_SESSION[$session_otp_key]) && (string)$_SESSION[$session_otp_key] === (string)$otp) {
+            // OTP matches
+            // unset($_SESSION[$session_otp_key]); // optional, but good for security
+            
+            // Log to database
+            $stmtP = $pdo->prepare("SELECT full_name, dob FROM patients WHERE patient_id = ?");
+            $stmtP->execute([$patient_id]);
+            $pat = $stmtP->fetch();
+
+            $insert = $pdo->prepare("
+                INSERT INTO profile_access_requests (requesting_doctor_id, patient_full_name, patient_dob, patient_id, reason, status, decided_at)
+                VALUES (?, ?, ?, ?, ?, 'approved', NOW())
+            ");
+            $doctor_id = $_SESSION['doctor_id'] ?? 1;
+            $insert->execute([
+                $doctor_id, 
+                $pat['full_name'] ?? 'Unknown', 
+                $pat['dob'] ?? null, 
+                $patient_id, 
+                'Requested via OTP verification process'
+            ]);
+
+            echo json_encode(['success' => true, 'message' => 'Identity Verified successfully. Profile unlocked.']);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Invalid or expired OTP. Verification failed.']);
+        }
     } else {
-        echo json_encode(['success' => false, 'error' => 'Invalid or expired OTP.']);
+        echo json_encode(['success' => false, 'error' => 'Invalid action.']);
     }
-} else {
-    echo json_encode(['success' => false, 'error' => 'Invalid action.']);
+} catch (\Throwable $e) {
+    echo json_encode(['success' => false, 'error' => 'Server error: ' . $e->getMessage()]);
 }
-?>

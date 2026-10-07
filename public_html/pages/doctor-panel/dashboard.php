@@ -222,14 +222,15 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
               <i class="fa-regular fa-calendar-check metric-icon-top text-emerald"></i>
             </div>
             <div class="metric-value-row">
-              <span class="metric-value">18</span>
+              <span class="metric-value"><?php echo $consultations['total_consultations'] ?? 0; ?></span>
               <span class="metric-unit">total</span>
-              <span class="metric-badge green-badge"><i class="fa-solid fa-arrow-trend-up"></i> +12%</span>
+              <?php if (($consultations['total_consultations'] ?? 0) > 0): ?>
+              <span class="metric-badge green-badge"><i class="fa-solid fa-arrow-trend-up"></i> Active</span>
+              <?php endif; ?>
             </div>
             <div class="metric-footer-pills">
-              <span class="sub-pill">&bull; 11 Done</span>
-              <span class="sub-pill">&bull; 7 Pending</span>
-              <span class="sub-pill">1 In Exam</span>
+              <span class="sub-pill">&bull; <?php echo $consultations['done_consultations'] ?? 0; ?> Done</span>
+              <span class="sub-pill">&bull; <?php echo $consultations['pending_consultations'] ?? 0; ?> Pending</span>
             </div>
           </div>
 
@@ -239,12 +240,14 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
               <i class="fa-solid fa-prescription metric-icon-top text-blue"></i>
             </div>
             <div class="metric-value-row">
-              <span class="metric-value">14</span>
+              <span class="metric-value"><?php echo $rx_reviews['queued_reviews'] ?? 0; ?></span>
               <span class="metric-unit">queued</span>
-              <span class="metric-badge alert-red-pill">! 4 Urgent</span>
+              <?php if (($rx_reviews['queued_reviews'] ?? 0) > 0): ?>
+              <span class="metric-badge alert-red-pill">! Action Needed</span>
+              <?php endif; ?>
             </div>
             <div class="metric-footer">
-              <span>Polypharmacy check: <strong>5</strong></span>
+              <span>Polypharmacy check: <strong><?php echo $rx_reviews['polypharmacy_check'] ?? 0; ?></strong></span>
               <a href="#" class="link-arrow" id="batch-sign-link">Batch Sign &rarr;</a>
             </div>
           </div>
@@ -255,11 +258,13 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
               <i class="fa-solid fa-triangle-exclamation metric-icon-top text-red"></i>
             </div>
             <div class="metric-value-row">
-              <span class="metric-value text-red">3</span>
+              <span class="metric-value text-red"><?php echo $critical_alerts['abnormal_alerts'] ?? 0; ?></span>
               <span class="metric-unit text-red">abnormal</span>
+              <?php if (($critical_alerts['abnormal_alerts'] ?? 0) > 0): ?>
               <span class="metric-badge red-fill-badge">Stat Attention</span>
+              <?php endif; ?>
             </div>
-            <p class="metric-sub-text text-red">Troponin, K+ imbalance, HbA1c 11</p>
+            <p class="metric-sub-text text-red"><?php echo htmlspecialchars($critical_alerts['sub_text_tests'] ?? 'No alerts currently'); ?></p>
           </div>
 
           <div class="metric-card">
@@ -268,11 +273,11 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
               <i class="fa-regular fa-thumbs-up metric-icon-top text-teal"></i>
             </div>
             <div class="metric-value-row">
-              <span class="metric-value">94.2%</span>
+              <span class="metric-value"><?php echo $care_index['care_index_percentage'] ?? '0.0'; ?>%</span>
               <span class="metric-unit">satisfaction</span>
               <span class="metric-badge green-fill-badge">98th Pctl</span>
             </div>
-            <p class="metric-sub-text">Average Wait: 8.4 mins <span class="text-semibold">Quality Tier A</span></p>
+            <p class="metric-sub-text"><span class="text-semibold"><?php echo $care_index['quality_tier'] ?? 'N/A'; ?></span></p>
           </div>
         </div>
 
@@ -298,26 +303,31 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
                 </div>
               </div>
 
-              <!-- POSITION 2: Patient Queue Actions -->
-              <div class="queue-item highlight-border">
+              <?php foreach($patient_schedule as $patient): ?>
+              <div class="queue-item <?php echo ($patient['status'] == 'in_progress') ? 'highlight-border' : ''; ?>">
                 <div class="time-col">
-                  <span class="time-text">09:15</span>
-                  <span class="ampm-text">AM</span>
+                  <?php 
+                    $time_parts = explode(':', $patient['time_slot']);
+                    $hour = (int)$time_parts[0];
+                    $min = isset($time_parts[1]) ? $time_parts[1] : '00';
+                    $ampm = $hour >= 12 ? 'PM' : 'AM';
+                    $hour12 = $hour % 12 ?: 12;
+                  ?>
+                  <span class="time-text"><?php echo sprintf("%02d:%02d", $hour12, $min); ?></span>
+                  <span class="ampm-text"><?php echo $ampm; ?></span>
                 </div>
                 <div class="patient-info-col">
                   <div class="patient-head">
-                    <strong class="patient-name">Arthur Pendelton</strong>
-                    <span class="patient-meta">62 y/o &bull; M</span>
-                    <span class="badge badge-emerald">In Progress</span>
+                    <strong class="patient-name"><?php echo htmlspecialchars($patient['patient_name']); ?></strong>
+                    <span class="patient-meta"><?php echo htmlspecialchars($patient['age']); ?> y/o &bull; <?php echo htmlspecialchars(ucfirst($patient['gender'])); ?></span>
+                    <span class="badge badge-emerald"><?php echo htmlspecialchars(ucfirst($patient['status'])); ?></span>
                   </div>
                   <p class="chief-complaint">
-                    <strong>Chief Complaint:</strong> Type 2 Diabetes follow-up, symptomatic hyperglycemia, mild
-                    peripheral neuropathy
+                    <strong>Chief Complaint:</strong> <?php echo htmlspecialchars($patient['chief_complaint'] ?? 'Routine Checkup'); ?>
                   </p>
                   <div class="vitals-row">
-                    <span>BP: 138/86</span>
-                    <span>HR: 74 bpm</span>
-                    <span class="text-red">HbA1c: 9.8% &uarr;</span>
+                    <span>BP: <?php echo htmlspecialchars($patient['blood_pressure'] ?? 'N/A'); ?></span>
+                    <span>BMI: <?php echo htmlspecialchars($patient['bmi'] ?? 'N/A'); ?></span>
                   </div>
                 </div>
                 <div class="queue-actions">
@@ -327,33 +337,11 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
                       class="fa-solid fa-chart-line"></i> Active Chart</button>
                 </div>
               </div>
-
-              <div class="queue-item">
-                <div class="time-col">
-                  <span class="time-text">09:45</span>
-                  <span class="ampm-text">AM</span>
-                </div>
-                <div class="patient-info-col">
-                  <div class="patient-head">
-                    <strong class="patient-name">Eleanor Vance-Croft</strong>
-                    <span class="patient-meta">48 y/o &bull; F</span>
-                    <span class="badge badge-blue-light">Waiting (Exam 2)</span>
-                  </div>
-                  <p class="chief-complaint">
-                    <strong>Chief Complaint:</strong> Refractory Hypertension review, morning occipital headaches, pedal
-                    edema
-                  </p>
-                  <div class="vitals-row">
-                    <span class="text-red">BP: 162/98 &uarr;</span>
-                    <span>HR: 88 bpm</span>
-                    <span>BMI: 29.4</span>
-                  </div>
-                </div>
-                <div class="queue-actions">
-                  <button class="btn-outline-sm btn-view-records" onclick="viewPatientRecords(this)"><i
-                      class="fa-solid fa-folder-open"></i> Records</button>
-                </div>
-              </div>
+              <?php endforeach; ?>
+              
+              <?php if (empty($patient_schedule)): ?>
+                <div style="padding: 20px; text-align: center; color: #64748b;">No scheduled appointments found for today.</div>
+              <?php endif; ?>
             </div>
 
             <!-- Lab Telemetry -->
@@ -385,23 +373,36 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
                 </thead>
                 <tbody>
                   <!-- POSITION 3: Telemetry Action -->
+                  <?php foreach($lab_telemetry as $telemetry): ?>
                   <tr>
                     <td>
-                      <div class="p-name">Julian Barnes</div>
-                      <div class="p-mrn">MRN-7892-C</div>
+                      <div class="p-name"><?php echo htmlspecialchars($telemetry['patient_name']); ?></div>
+                      <div class="p-mrn"><?php echo htmlspecialchars($telemetry['mrn'] ?? 'N/A'); ?></div>
                     </td>
                     <td>
-                      <div class="t-title">Cardiac Troponin I</div>
-                      <div class="t-sub">STAT Telemetry</div>
+                      <div class="t-title"><?php echo htmlspecialchars($telemetry['test_title']); ?></div>
+                      <div class="t-sub"><?php echo htmlspecialchars(ucfirst($telemetry['test_panel'])); ?></div>
                     </td>
-                    <td><span class="val-bold text-red">0.18 ng/mL &uarr;</span></td>
-                    <td class="text-muted">&lt; 0.04 ng/mL</td>
-                    <td><span class="table-tag tag-red-fill">Critical High</span></td>
+                    <?php 
+                      $is_high = strpos(strtolower($telemetry['observed_value']), 'high') !== false || strpos(strtolower($telemetry['clinical_impact']), 'critical') !== false;
+                    ?>
+                    <td><span class="val-bold <?php echo $is_high ? 'text-red' : ''; ?>"><?php echo htmlspecialchars($telemetry['observed_value']); ?></span></td>
+                    <td class="text-muted">Standard Ref</td>
+                    <td><span class="table-tag <?php echo $is_high ? 'tag-red-fill' : 'tag-green-fill'; ?>"><?php echo htmlspecialchars(ucfirst($telemetry['clinical_impact'])); ?></span></td>
                     <td class="text-right">
-                      <button class="btn-table-danger" id="btn-page-cardiology" onclick="pageCardiology(this)">Page
-                        Cardiology</button>
+                      <?php if($is_high): ?>
+                      <button class="btn-table-danger" id="btn-page-cardiology" onclick="pageCardiology(this)">Page Specialist</button>
+                      <?php else: ?>
+                      <button class="btn-outline-sm" style="font-size: 11px;">View</button>
+                      <?php endif; ?>
                     </td>
                   </tr>
+                  <?php endforeach; ?>
+                  <?php if(empty($lab_telemetry)): ?>
+                  <tr>
+                    <td colspan="6" style="text-align:center; padding:20px; color:#64748b;">No recent diagnostic telemetry available.</td>
+                  </tr>
+                  <?php endif; ?>
                 </tbody>
               </table>
             </div>
@@ -466,7 +467,7 @@ $lab_telemetry = $stmt_telemetry->fetchAll();
     </div>
   </div>
 
-  <script src="../../assets/js/doctor-panel/dashboard.js"></script>
+  <!-- Removed dashboard.js since we use SSR now -->
 </body>
 
 </html>

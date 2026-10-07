@@ -237,9 +237,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   http_response_code(400);
   echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-  }
   exit;
+  }
 }
+
+// =====================================================================
+// GET REQUEST: Fetch data for Server-Side Rendering
+// =====================================================================
+
+// 1. Fetch Doctor Profile
+$stmtDoc = $pdo->prepare("SELECT * FROM doctors WHERE doctor_id = :doc_id");
+$stmtDoc->execute([':doc_id' => $currentDocId]);
+$doctor_data = $stmtDoc->fetch();
+
+if (!$doctor_data) {
+    die("Doctor not found in the database.");
+}
+
+// 2. Fetch Qualifications
+$stmtQual = $pdo->prepare("SELECT * FROM doctor_qualifications WHERE doctor_id = :doc_id ORDER BY edu_year DESC");
+$stmtQual->execute([':doc_id' => $currentDocId]);
+$qualifications = $stmtQual->fetchAll();
+
+// 3. Fetch Schedule
+$stmtSched = $pdo->prepare("SELECT * FROM doctor_schedules WHERE doctor_id = :doc_id ORDER BY schedule_id ASC");
+$stmtSched->execute([':doc_id' => $currentDocId]);
+$schedules = $stmtSched->fetchAll();
+
 ?>
 
 <!DOCTYPE html>
@@ -332,18 +356,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="profile-banner-card">
           <div class="profile-main-info">
             <div class="profile-img-container">
-              <img src="https://i.pravatar.cc/150?img=47" alt="Dr. Nusrat Jahan" class="profile-img">
+              <img src="<?php echo htmlspecialchars($doctor_data['avatar_url'] ?? 'https://i.pravatar.cc/150?img=47'); ?>" alt="<?php echo htmlspecialchars($doctor_data['full_name']); ?>" class="profile-img">
               <span class="online-indicator"><i class="fa-solid fa-shield"></i></span>
             </div>
 
             <div class="profile-details">
               <div class="badge-row">
                 <span class="tag-badge green-light">ATTENDING PHYSICIAN</span>
-                <span class="tag-badge blue-light">FACULTY FELLOW (FCPS)</span>
+                <span class="tag-badge blue-light"><?php echo htmlspecialchars($doctor_data['designation'] ?? 'FACULTY FELLOW'); ?></span>
                 <span class="tag-badge sky-light">&bull; EPCS TIER-3 ACTIVE</span>
               </div>
-              <h1 class="doctor-title">Dr. Nusrat Jahan, FCPS, MRCP</h1>
-              <p class="doctor-subtitle">Board Certified Internal Medicine & Clinical Pharmacology</p>
+              <h1 class="doctor-title"><?php echo htmlspecialchars($doctor_data['full_name']); ?></h1>
+              <p class="doctor-subtitle">Board Certified <?php echo htmlspecialchars($doctor_data['primary_specialty_id'] == 1 ? 'Internal Medicine' : 'Specialist'); ?></p>
 
               <div class="doctor-meta">
                 <span><i class="fa-solid fa-id-card"></i> BMDC Reg: A-88204</span>
@@ -488,60 +512,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="routine-list">
-              <div class="routine-item">
+              <?php foreach ($schedules as $index => $schedule): ?>
+              <div class="routine-item <?php echo ($index === count($schedules) - 1) ? 'border-none' : ''; ?>">
                 <div>
-                  <strong class="day-text">Saturday</strong>
-                  <span class="dept-text">Internal Medicine</span>
+                  <strong class="day-text"><?php echo htmlspecialchars($schedule['day_of_week']); ?></strong>
+                  <span class="dept-text"><?php echo htmlspecialchars($schedule['department_name']); ?></span>
                 </div>
                 <div class="time-col">
-                  <span class="time-range">08:00 AM &mdash; 05:00 PM</span>
-                  <span class="loc-text">Outpatient Clinic</span>
+                  <span class="time-range"><?php echo htmlspecialchars($schedule['time_range']); ?></span>
+                  <span class="loc-text"><?php echo htmlspecialchars($schedule['location']); ?></span>
                 </div>
               </div>
-
-              <div class="routine-item">
-                <div>
-                  <strong class="day-text">Sunday</strong>
-                  <span class="dept-text">Clinical Pharmacology</span>
-                </div>
-                <div class="time-col">
-                  <span class="time-range">09:00 AM &mdash; 06:00 PM</span>
-                  <span class="loc-text">Consultation Rounds</span>
-                </div>
-              </div>
-
-              <div class="routine-item">
-                <div>
-                  <strong class="day-text">Monday</strong>
-                  <span class="dept-text">Telehealth</span>
-                </div>
-                <div class="time-col">
-                  <span class="time-range">10:00 AM &mdash; 04:00 PM</span>
-                  <span class="loc-text">Remote Follow-ups</span>
-                </div>
-              </div>
-
-              <div class="routine-item">
-                <div>
-                  <strong class="day-text">Tuesday</strong>
-                  <span class="dept-text">Hypertension Clinic</span>
-                </div>
-                <div class="time-col">
-                  <span class="time-range">08:30 AM &mdash; 05:30 PM</span>
-                  <span class="loc-text">Specialty Care</span>
-                </div>
-              </div>
-
-              <div class="routine-item border-none">
-                <div>
-                  <strong class="day-text">Wednesday</strong>
-                  <span class="dept-text">General Medicine</span>
-                </div>
-                <div class="time-col">
-                  <span class="time-range">08:00 AM &mdash; 03:00 PM</span>
-                  <span class="loc-text">Morning Rounds</span>
-                </div>
-              </div>
+              <?php endforeach; ?>
+              
+              <?php if (empty($schedules)): ?>
+                <div style="padding: 15px; color: #64748b;">No schedule established.</div>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -555,41 +541,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="education-list">
-              <!-- Degree 1 -->
-              <div class="edu-item">
+              <?php foreach ($qualifications as $index => $qual): ?>
+              <div class="edu-item <?php echo ($index === count($qualifications) - 1) ? 'border-none' : ''; ?>">
                 <div>
-                  <strong class="degree-title">MBBS</strong>
-                  <p class="degree-desc">Bachelor of Medicine, Bachelor of Surgery</p>
+                  <strong class="degree-title">
+                    <?php echo htmlspecialchars($qual['degree_title']); ?>
+                    <?php if ($qual['is_verified']): ?>
+                    <i class="fa-solid fa-circle-check" style="color:var(--emerald-500); margin-left:4px;" title="Verified"></i>
+                    <?php endif; ?>
+                  </strong>
+                  <p class="degree-desc"><?php echo htmlspecialchars($qual['degree_description']); ?></p>
                 </div>
                 <div class="edu-inst-col">
-                  <strong class="inst-name">Dhaka Medical College</strong>
-                  <span class="edu-year">2008 - 2014</span>
+                  <strong class="inst-name"><?php echo htmlspecialchars($qual['institution_name']); ?></strong>
+                  <span class="edu-year"><?php echo htmlspecialchars($qual['edu_year']); ?></span>
                 </div>
               </div>
-
-              <!-- Degree 2 -->
-              <div class="edu-item">
-                <div>
-                  <strong class="degree-title">FCPS</strong>
-                  <p class="degree-desc">Fellowship of the College of Physicians and Surgeons</p>
-                </div>
-                <div class="edu-inst-col">
-                  <strong class="inst-name">BCPS, Bangladesh</strong>
-                  <span class="edu-year">2016 - 2018</span>
-                </div>
-              </div>
-
-              <!-- Degree 3 -->
-              <div class="edu-item border-none">
-                <div>
-                  <strong class="degree-title">MRCP</strong>
-                  <p class="degree-desc">Membership of the Royal College of Physicians</p>
-                </div>
-                <div class="edu-inst-col">
-                  <strong class="inst-name">Royal College of Physicians, UK</strong>
-                  <span class="edu-year">2020</span>
-                </div>
-              </div>
+              <?php endforeach; ?>
+              
+              <?php if (empty($qualifications)): ?>
+                <div style="padding: 15px; color: #64748b;">No education records found.</div>
+              <?php endif; ?>
             </div>
           </div>
         </div>

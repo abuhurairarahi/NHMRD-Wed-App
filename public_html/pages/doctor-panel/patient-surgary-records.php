@@ -1,3 +1,8 @@
+<?php
+session_start();
+require_once __DIR__ . '/../../api/db.php';
+$patient_id = isset($_GET['patient_id']) ? (int)$_GET['patient_id'] : 1;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,17 +100,17 @@
             <i class="fa-solid fa-user-clock"></i> Session: <span>01:58:40</span>
             <span class="tag-interactive">INTERACTIVE</span>
           </div>
-          <button class="btn-write-rx"><i class="fa-solid fa-pen-to-square"></i> Write Prescription</button>
+          <a href="new-prescription-form.php?patient_id=<?= $patient_id ?>" class="btn-write-rx" style="text-decoration:none; display:inline-block;"><i class="fa-solid fa-pen-to-square"></i> Write Prescription</a>
         </div>
       </div>
 
       <!-- Module Navigation Tabs -->
       <nav class="module-tabs">
-        <a href="../../pages/doctor-panel/patient-medical-profile.php" class="tab-btn"><i class="fa-solid fa-user"></i> Patient Profile</a>
-        <a href="../../pages/doctor-panel/patient-prescription-records.php" class="tab-btn"><i class="fa-solid fa-capsules"></i> Prescription Records</a>
-        <a href="../../pages/doctor-panel/patient-surgary-records.php" class="tab-btn active"><i class="fa-solid fa-scalpel"></i> Surgery Records</a>
-        <a href="../../pages/doctor-panel/patient-test-records.php" class="tab-btn"><i class="fa-solid fa-vial"></i> Test Records</a>
-        <a href="../../pages/doctor-panel/patient-vaccine-records.php" class="tab-btn"><i class="fa-solid fa-syringe"></i> Vaccine Records</a>
+        <a href="../../pages/doctor-panel/patient-medical-profile.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-user"></i> Patient Profile</a>
+        <a href="../../pages/doctor-panel/patient-prescription-records.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-capsules"></i> Prescription Records</a>
+        <a href="../../pages/doctor-panel/patient-surgary-records.php?patient_id=<?= $patient_id ?>" class="tab-btn active"><i class="fa-solid fa-scalpel"></i> Surgery Records</a>
+        <a href="../../pages/doctor-panel/patient-test-records.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-vial"></i> Test Records</a>
+        <a href="../../pages/doctor-panel/patient-vaccine-records.php?patient_id=<?= $patient_id ?>" class="tab-btn"><i class="fa-solid fa-syringe"></i> Vaccine Records</a>
       </nav>
 
       <!-- Main Content Area -->

@@ -1,3 +1,11 @@
+<?php
+session_start();
+// In this demo, if the doctor generates an OTP for a patient, we check the session to see if it exists.
+// We use a fallback patient_id of 1 (or the session's patient_id).
+$patient_id = $_SESSION['patient_id'] ?? 1;
+$session_otp_key = 'wa_otp_' . $patient_id;
+$patient_otp = $_SESSION[$session_otp_key] ?? null;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -430,6 +438,13 @@
 
   <!-- Bootstrap Bundle JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <?php if ($patient_otp): ?>
+  <script>
+    // Simulate the patient receiving an SMS
+    alert("NHMRD Security Alert: You have received a request to grant a doctor access to your medical profile.\n\nYour OTP is: <?php echo htmlspecialchars($patient_otp); ?>");
+  </script>
+  <?php endif; ?>
 </body>
 
 </html>
