@@ -275,7 +275,7 @@ The project proposal identifies the following team members:
 |---|---|---|
 | Sanjana Farhin | 0112420212 | Idea Designer & Developer |
 | Md. Abu Huraira Rahi | 0112420204 | Project Leader & Idea Designer |
-| Hasibur Rahman | 0112231066 | Role not specified in the proposal - Absent |
+| Hasibur Rahman | 0112231066 | Absent |
 
 ## 🔮 Future Enhancements
 
