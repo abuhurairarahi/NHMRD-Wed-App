@@ -23,7 +23,6 @@ The platform aims to make medical histories more accessible, improve continuity 
 - [Dependencies and Future Integrations](#-dependencies-and-future-integrations)
 - [Security and Privacy](#-security-and-privacy)
 - [Development Team](#-development-team)
-- [Future Enhancements](#-future-enhancements)
 - [Disclaimer](#-disclaimer)
 - [Project Report](#-read-the-report)
 
@@ -277,18 +276,7 @@ The project proposal identifies the following team members:
 | Md. Abu Huraira Rahi | 0112420204 | Project Leader & Idea Designer |
 | Hasibur Rahman | 0112231066 | Absent |
 
-## 🔮 Future Enhancements
-
-Potential future development directions include:
-
-- 📱 Mobile application integration.
-- 🪪 Secure digital health passports for citizens.
-- 🔗 Broader integration with authorized healthcare facilities.
-- 🚑 Improved emergency information access and donor coordination.
-- 🤖 Exploration of AI-assisted healthcare capabilities, subject to separate scope, validation, and safety requirements.
-- ☁️ Scalable cloud deployment for wider availability.
-
-These are proposed future directions rather than claims of existing functionality.
+---
 
 ## ⚠️ Disclaimer
 
