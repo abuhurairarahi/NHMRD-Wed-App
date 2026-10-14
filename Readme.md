@@ -247,8 +247,6 @@ The proposed nationwide platform depends on external services and institutional 
 - An SMS or email gateway for OTP delivery.
 - Government policy approval for nationwide deployment.
 
-These integrations require appropriate authorization and are not implied to be operational merely because they appear in the project proposal.
-
 ## 🔒 Security and Privacy
 
 NHMRD is intended to handle sensitive medical and identity information. Security and privacy must therefore be considered throughout development.
