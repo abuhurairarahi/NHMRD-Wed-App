@@ -1,4 +1,4 @@
-# 🇧🇩 National Health & Medical Record Directory (NHMRD)
+# National Health & Medical Record Directory (NHMRD)
 
 ### A Unified Digital Health Record & Doctor Regulation Platform for Bangladesh
 
@@ -25,6 +25,7 @@ The platform aims to make medical histories more accessible, improve continuity 
 - [Development Team](#-development-team)
 - [Future Enhancements](#-future-enhancements)
 - [Disclaimer](#-disclaimer)
+- [Project Report](#-read-the-report)
 
 ---
 
@@ -272,9 +273,9 @@ The project proposal identifies the following team members:
 
 | Team Member | Student ID | Role |
 |---|---|---|
-| Sanjana Farhin | 0112420212 | Idea Designer |
+| Sanjana Farhin | 0112420212 | Idea Designer & Developer |
 | Md. Abu Huraira Rahi | 0112420204 | Project Leader & Idea Designer |
-| Hasibur Rahman | 0112231066 | Role not specified in the proposal |
+| Hasibur Rahman | 0112231066 | Role not specified in the proposal - Absent |
 
 ## 🔮 Future Enhancements
 
@@ -309,8 +310,13 @@ This project should not be treated as an officially approved national healthcare
 
 **Development Environment:** XAMPP
 
-**Project Lead:** Md. Abu Huraira Rahi, [Sanjana Farhin Astha](https://github.com/sanjanafarhin)
+**Project Lead:** [Md. Abu Huraira Rahi](https://github.com/abuhurairarahi), [Sanjana Farhin Astha](https://github.com/sanjanafarhin)
 
 ---
+
+## 🔗 Read the Report
+
+**Download NHMRD Report:** [Download](https://drive.google.com/file/d/10P6FtV-vsToRi4QiVDm3sgxIUAO62ijh/view?usp=drive_link)
+
 
 *“The function of good software is to make the complex appear simple.” — Grady Booch*
