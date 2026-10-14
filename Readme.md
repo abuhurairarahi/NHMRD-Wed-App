@@ -309,7 +309,7 @@ This project should not be treated as an officially approved national healthcare
 
 **Development Environment:** XAMPP
 
-**Project Lead:** Md. Abu Huraira Rahi
+**Project Lead:** Md. Abu Huraira Rahi, Sanjana Farhin Astha
 
 ---
 
